@@ -55,12 +55,12 @@ void shiftDown(int a[], int start, int end) {
   int root = start;
   
   while( (2*root+1) <= end) {
-    int child = 2*root+1;
+    int child = LEFT(root);
     int swap = root;
     
     if (a[swap]<a[child]) swap = child;
     if ((child+1) <= end)
-      if (a[swap]<a[child+1]) swap = child+1;
+      if (a[swap]<a[child+1]) swap = RIGHT(root);
     if(swap==root) root=end; // return
     else {
       int tmp = a[swap];
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]){
 
         printf("Time: %f\n", end - start);
     }else{
-        printf("USAGE: ./par_heapsort size threads exclusionZones\n");
+        printf("USAGE: %s size threads exclusionZones\n", argv[0]);
     }
     return 0;
 }
