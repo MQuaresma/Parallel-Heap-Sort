@@ -1,6 +1,6 @@
 CC=gcc
-SEQ_CFLAGS=-Wall
-PAR_CFLAGS=-Wall -lpthread
+SEQ_CFLAGS=-Wall -fopenmp
+PAR_CFLAGS=-Wall -lpthread -fopenmp
 SEQ=seq_heapsort
 PAR=par_heapsort
 

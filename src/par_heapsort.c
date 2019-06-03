@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "utils.c"
+#include <omp.h>
 
 void heapsort(int a[], int);
 void heapify(int a[], int);
@@ -58,11 +60,18 @@ int main(int argc, char *argv[]){
         int size = atoi(argv[1]);
         int N_threads = atoi(argv[2]);
         int a[size];
+        double start, end;
 
         for(int i=0; i<size; i++)
             a[i]=rand();
 
+        start = omp_get_wtime();
+
         heapsort(a,size);
+
+        end = omp_get_wtime();
+
+        printf("Time: %f\n", end - start);
     }else{
         printf("USAGE: ./par_heapsort size threads exclusionZones\n");
     }
