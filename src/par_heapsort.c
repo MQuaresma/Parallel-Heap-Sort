@@ -4,7 +4,7 @@
 #include <omp.h>
 #include <pthread.h>
 
-void heapsort();
+void heap_sort();
 void heapify(int a[], int);
 void shiftDown(int a[], int, int);
 
@@ -26,7 +26,7 @@ void *aux_parallel(void *id){
 }
 
 //--------- skeleton code for parallel version with locks
-void heapsort() {
+void heap_sort() {
   heapify(a,size); // build max-heap (sequential)
 
   end=size-1;
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]){
 
         start = omp_get_wtime();
 
-        heapsort();
+        heap_sort();
 
         end = omp_get_wtime();
 

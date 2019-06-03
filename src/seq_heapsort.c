@@ -3,13 +3,13 @@
 #include "utils.c"
 #include <omp.h>
 
-void heapsort(int a[], int);
+void heap_sort(int a[], int);
 void heapify(int a[], int);
 void shiftDown(int a[], int, int);
 
 
 //--------- skeleton code for parallel version with locks
-void heapsort(int a[], int count) {
+void heap_sort(int a[], int count) {
   heapify(a,count);
 
   int end=count-1;
@@ -64,13 +64,13 @@ int main(int argc, char *argv[]){
 
         start = omp_get_wtime();
 
-        heapsort(a,size);
+        heap_sort(a,size);
         
         end = omp_get_wtime();
 
         printf("Time: %f\n", end - start);
     }else{
-        printf("USAGE: ./seq_heapsort size\n");
+        printf("USAGE: ./seq_heap_sort size\n");
     }
     return 0;
 }

@@ -1,8 +1,17 @@
 CC=gcc
-SEQ_CFLAGS=-Wall -fopenmp
-PAR_CFLAGS=-Wall -lpthread -fopenmp
+SEQ_CFLAGS=-Wall
+PAR_CFLAGS=-Wall -lpthread
 SEQ=seq_heapsort
 PAR=par_heapsort
+OS:= $(shell uname -s)
+
+ifeq ($(OS), Darwin)
+	PAR_CFLAGS += -Xpreprocessor -fopenmp -lomp
+	SEQ_CFLAGS += -Xpreprocessor -fopenmp -lomp
+else
+	PAR_CFLAGS += -fopenmp
+	SEQ_CFLAGS += -fopenmp
+endif
 
 .DEFAULT_GOAL := all
 
