@@ -8,17 +8,15 @@ void shiftDown(int a[], int, int);
 
 //--------- skeleton code for parallel version with locks
 void heapsort(int a[], int count) {
-  heapify(a,count); // build max-heap (sequential)
+  heapify(a,count);
 
   int end=count-1;
 
-  while ( end>0 ) { // do in parallel
-    // do in sequential order
+  while ( end>0 ) {
     int cmax = a[0];
     a[0]=a[end];
-    a[end]=cmax; //swap
-    end--; // decrease heap size
-    // repair heap : do with locking of parent and child
+    a[end]=cmax;
+    end--;
     shiftDown(a,0,end);
   }
 }
@@ -42,7 +40,7 @@ void shiftDown(int a[], int start, int end) {
     if (a[swap]<a[child]) swap = child;
     if ((child+1) <= end)
       if (a[swap]<a[child+1]) swap = child+1;
-    if(swap==root) root=end; // return
+    if(swap==root) root=end;
     else {
       int tmp = a[swap];
       
