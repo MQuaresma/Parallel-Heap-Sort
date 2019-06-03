@@ -12,9 +12,11 @@ static int *a;
 static int size;
 static int end;
 static int N_threads;
+static pthread_mutex_t lock;
 
-void *aux_parallel(void *id){
+void *aux_parallel_tree(void *id){
   while ( end>0 ) { // do in parallel
+    pthread_mutex_lock(&lock);
     // do in sequential order
     int cmax = a[0];
     a[0]=a[end];
@@ -22,24 +24,28 @@ void *aux_parallel(void *id){
     end--; // decrease heap size
     // repair heap : do with locking of parent and child
     shiftDown(a,0,end);
+    pthread_mutex_unlock(&lock);
   }
 }
 
 //--------- skeleton code for parallel version with locks
-void heap_sort() {
+void heap_sort(int v_lock) {
   heapify(a,size); // build max-heap (sequential)
 
   end=size-1;
 
+  pthread_mutex_init(&lock, NULL);
   pthread_t* thread_handles = (pthread_t*)malloc(N_threads*sizeof(pthread_t));
 
-  for(long i=0; i<N_threads; i++)
-        pthread_create(&thread_handles[i],NULL,aux_parallel, (void *)i);
+  for(long i=0; i<N_threads; i++){
+    pthread_create(&thread_handles[i],NULL,aux_parallel_tree, (void *)i);
+  }
 
   for(long i=0; i<N_threads; i++)
         pthread_join(thread_handles[i],NULL);
 
   free(thread_handles);
+  pthread_mutex_destroy(&lock);
 }
 
 void heapify(int a[], int count) {
@@ -84,10 +90,11 @@ int main(int argc, char *argv[]){
 
         start = omp_get_wtime();
 
-        heap_sort();
+        heap_sort(atoi(argv[3]));
 
         end = omp_get_wtime();
 
+        free(a);
         printf("Time: %f\n", end - start);
     }else{
         printf("USAGE: %s size threads exclusionZones\n", argv[0]);
