@@ -15,16 +15,22 @@ static int N_threads;
 static pthread_mutex_t lock;
 
 void *aux_parallel_tree(void *id){
-  while ( end>0 ) { // do in parallel
+
+  while ( 1 ) { // do in parallel
     pthread_mutex_lock(&lock);
-    // do in sequential order
-    int cmax = a[0];
-    a[0]=a[end];
-    a[end]=cmax; //swap
-    end--; // decrease heap size
-    // repair heap : do with locking of parent and child
-    shiftDown(a,0,end);
-    pthread_mutex_unlock(&lock);
+    if (end > 0){
+        // do in sequential order
+        int cmax = a[0];
+        a[0]=a[end];
+        a[end]=cmax; //swap
+        end--; // decrease heap size
+        // repair heap : do with locking of parent and child
+        shiftDown(a,0,end);
+        pthread_mutex_unlock(&lock);
+    }else{
+        pthread_mutex_unlock(&lock);
+        break;
+    }
   }
 }
 
