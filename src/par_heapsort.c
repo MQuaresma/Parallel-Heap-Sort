@@ -2,18 +2,18 @@
 #include <stdlib.h>
 #include "utils.c"
 #include <omp.h>
+#include <pthread.h>
 
-void heapsort(int a[], int);
+void heapsort();
 void heapify(int a[], int);
 void shiftDown(int a[], int, int);
 
+static int *a;
+static int size;
+static int end;
+static int N_threads;
 
-//--------- skeleton code for parallel version with locks
-void heapsort(int a[], int count) {
-  heapify(a,count); // build max-heap (sequential)
-
-  int end=count-1;
-
+void *aux_parallel(void *id){
   while ( end>0 ) { // do in parallel
     // do in sequential order
     int cmax = a[0];
@@ -23,6 +23,23 @@ void heapsort(int a[], int count) {
     // repair heap : do with locking of parent and child
     shiftDown(a,0,end);
   }
+}
+
+//--------- skeleton code for parallel version with locks
+void heapsort() {
+  heapify(a,size); // build max-heap (sequential)
+
+  end=size-1;
+
+  pthread_t* thread_handles = (pthread_t*)malloc(N_threads*sizeof(pthread_t));
+
+  for(long i=0; i<N_threads; i++)
+        pthread_create(&thread_handles[i],NULL,aux_parallel, (void *)i);
+
+  for(long i=0; i<N_threads; i++)
+        pthread_join(thread_handles[i],NULL);
+
+  free(thread_handles);
 }
 
 void heapify(int a[], int count) {
@@ -57,9 +74,9 @@ void shiftDown(int a[], int start, int end) {
 
 int main(int argc, char *argv[]){
     if(argc == 4){
-        int size = atoi(argv[1]);
-        int N_threads = atoi(argv[2]);
-        int a[size];
+        size = atoi(argv[1]);
+        N_threads = atoi(argv[2]);
+        a = (int *)calloc(size, sizeof(int));
         double start, end;
 
         for(int i=0; i<size; i++)
@@ -67,7 +84,7 @@ int main(int argc, char *argv[]){
 
         start = omp_get_wtime();
 
-        heapsort(a,size);
+        heapsort();
 
         end = omp_get_wtime();
 
