@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <stdlib.h>
+
 void heapsort(int a[], int);
 void heapify(int a[], int);
 void shiftDown(int a[], int, int);
@@ -51,5 +54,16 @@ void shiftDown(int a[], int start, int end) {
 }
 
 int main(int argc, char *argv[]){
-  return 0;
+    if(argc == 2){
+        int size = atoi(argv[1]);
+        int a[size];
+        
+        for(int i=0; i<size; i++)
+            a[i]=rand();
+
+        heapsort(a,size);
+    }else{
+        printf("USAGE: ./seq_heapsort size\n");
+    }
+    return 0;
 }
