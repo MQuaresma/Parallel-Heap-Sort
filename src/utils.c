@@ -1,4 +1,6 @@
 #include<stdio.h>
+#define LEFT(i) 2*i+1
+#define RIGHT(i) LEFT(i)+1
 
 int is_sorted(int l[], int n){
     int i;
