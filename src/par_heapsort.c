@@ -8,7 +8,7 @@
 
 void heap_sort(int);
 void heapify(int a[], int);
-void shiftDown(int a[], int, int);
+void shiftDown(int a[], int);
 void shiftDown_seq(int a[], int start, int end);
 
 static int *a;
@@ -42,14 +42,12 @@ void *aux_parallel_level(void *id){
     pthread_mutex_lock(&end_lock);
 
     while(end > 0){
-        level_count = ceil(log(end) / log(2));
         pthread_mutex_lock(level_locks);
-        pthread_mutex_lock(level_locks+level_count);
         max = a[0];
         a[0] = a[end];
         a[end] = max;
         end--;
-        shiftDown(a,0,end);
+        shiftDown(a,0);
         pthread_mutex_lock(&end_lock);
     }
 
@@ -126,27 +124,23 @@ void shiftDown_seq(int a[], int start, int end) {
     }
 }
 
-void shiftDown(int a[], int start, int end_a) {
-    pthread_mutex_unlock(&end_lock);
+void shiftDown(int a[], int start) {
     int cur_level = 0;
     int root = start;
     int child = LEFT(root);
     int swap;
     int tmp;
-      
-    while( child <= end_a) {
+    
+    while(child <= end) {
         swap = root;
-		if(root)
-            pthread_mutex_lock(level_locks+cur_level);
-        if (child < end_a) 
-            pthread_mutex_lock(level_locks+cur_level+1);
+        pthread_mutex_lock(level_locks+cur_level+1);
         
         if(a[swap] < a[child]) 
             swap = child;
-        if((child+1) <= end_a)
+        if((child+1) <= end)
             if (a[swap] < a[child+1]) swap = child+1;
         if(swap == root) 
-            root = end_a;
+            root = end;
         else {
             tmp = a[swap];
             a[swap] = a[root];
@@ -154,10 +148,13 @@ void shiftDown(int a[], int start, int end_a) {
             root = swap;
         }
         pthread_mutex_unlock(level_locks+cur_level);
-        pthread_mutex_unlock(level_locks+cur_level+1);
+        pthread_mutex_unlock(&end_lock);
         cur_level ++;
         child = LEFT(root);
+        pthread_mutex_lock(&end_lock);
     }
+    pthread_mutex_unlock(level_locks+cur_level);
+    pthread_mutex_unlock(&end_lock);
 }
 
 
