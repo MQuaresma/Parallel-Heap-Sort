@@ -15,10 +15,14 @@ static int end;
 static int N_threads;
 static int level_count;
 static pthread_mutex_t *level_locks; 
+static pthread_mutex_t *node_locks; 
 static pthread_rwlock_t end_lock;
 static pthread_mutex_t tree_lock;
 
 void *aux_parallel_tree(void *id){
+    /** Parallel heap sort with granularity at 
+     * tree level (similar to sequential level)
+     */
     while(1){
         pthread_mutex_lock(&tree_lock);
         if(end > 0){
@@ -37,6 +41,9 @@ void *aux_parallel_tree(void *id){
 }
 
 void *aux_parallel_level(void *id){
+    /** Parallel heap sort with granularity at 
+     * each level of the tree
+     */
     int max;
     pthread_mutex_lock(level_locks);
     pthread_rwlock_wrlock(&end_lock);
@@ -100,7 +107,6 @@ void shiftDown_Par(int a[], int start){
 
 void *init(int granularity, pthread_t *thread_handles){
     void *(*callback)(void*);
-    level_count = ceil(log(size) / log(2));
 
     switch(granularity){
         case 1:         //tree granularity
@@ -108,12 +114,20 @@ void *init(int granularity, pthread_t *thread_handles){
             callback = aux_parallel_tree;
             break;
         case 2:         //level granularity
+            level_count = ceil(log(size) / log(2));
             pthread_rwlock_init(&end_lock, NULL);
             level_locks = (pthread_mutex_t*)malloc(level_count * sizeof(pthread_mutex_t));
             for(int i=0; i < level_count; i ++)
                 pthread_mutex_init(level_locks+i, NULL);
             
             callback = aux_parallel_level;
+            break;
+        case 3:
+            pthread_rwlock_init(&end_lock, NULL);
+            node_locks = (pthread_mutex_t*)malloc(size * sizeof(pthread_mutex_t));
+            for(int i=0; i < level_count; i ++)
+                pthread_mutex_init(node_locks+i, NULL);
+            callback = aux_parallel_threePoint;
             break;
         default:
             free(thread_handles);
@@ -132,6 +146,12 @@ void destroy(int granularity){
             pthread_rwlock_destroy(&end_lock);
             for(int i=0; i < level_count; i ++)
                 pthread_mutex_destroy(level_locks+i);
+            free(level_locks);
+            break;
+        case 3:         //three node granularity
+            pthread_rwlock_destroy(&end_lock);
+            for(int i=0; i < size; i ++)
+                pthread_mutex_destroy(node_locks+i);
             free(level_locks);
             break;
     }
