@@ -22,14 +22,13 @@ static pthread_mutex_t end_mut;
 void *aux_parallel_level(void *id){
     int max;
     pthread_mutex_lock(&end_mut);
-
+	    
     while(end > 0){
         pthread_mutex_lock(level_mutexes);
         pthread_mutex_lock(level_mutexes+level_count);
         max = a[0];
         a[0] = a[end];
         a[end] = max;
-        pthread_mutex_unlock(level_mutexes);
         pthread_mutex_unlock(level_mutexes+level_count);
         end--;
         shiftDown(a,0,end);
@@ -41,8 +40,7 @@ void *aux_parallel_level(void *id){
 }
 
 void heap_sort() {
-    //level_count = log(size) / log(2);
-    level_count = 4;
+    level_count = ceil(log(size) / log(2));
     pthread_t* thread_handles = (pthread_t*)malloc(N_threads*sizeof(pthread_t));
 
     heapify(a,size); 
@@ -68,46 +66,41 @@ void heap_sort() {
 }
 
 void shiftDown_seq(int a[], int start, int end) {
-  int root = start;
-  
-  while( (2*root+1) <= end) {
-    int child = 2*root+1;
+    int root = start;
     int swap = root;
-    
-    if (a[swap]<a[child]) swap = child;
-    if ((child+1) <= end)
-      if (a[swap]<a[child+1]) swap = child+1;
-    if(swap==root) root=end;
-    else {
-      int tmp = a[swap];
-      a[swap]=a[root];
-      a[root]=tmp;
-      root = swap;
+
+    while( (2*root+1) <= end) {
+        if (a[swap]<a[child]) swap = child;
+        if ((child+1) <= end)
+            if (a[swap]<a[child+1]) swap = child+1;
+        if(swap==root) root=end;
+        else {
+            int tmp = a[swap];
+            a[swap]=a[root];
+            a[root]=tmp;
+            root = swap;
+        }
     }
-  }
 }
-
-
 
 void shiftDown(int a[], int start, int end_a) {
     pthread_mutex_unlock(&end_mut);
+    int cur_level = 0;
     int root = start;
-    int child;
+    int child = LEFT(root);
     int swap;
     int tmp;
-    int cur_level = 0;
-  
-    while( (2*root+1) <= end_a) {
-        child = LEFT(root);
+      
+    while( child <= end_a) {
         swap = root;
-        pthread_mutex_lock(level_mutexes+cur_level);
-        pthread_mutex_lock(level_mutexes+cur_level+1);
-
-        if (a[swap]<a[child]) 
+		if(root)
+            pthread_mutex_lock(level_mutexes+cur_level);
+        
+        if(a[swap] < a[child]) 
             swap = child;
-        if ((child+1) <= end_a)
-            if (a[swap]<a[child+1]) swap = child+1;
-        if(swap==root) 
+        if((child+1) <= end_a)
+            if (a[swap] < a[child+1]) swap = child+1;
+        if(swap == root) 
             root = end_a;
         else {
             tmp = a[swap];
@@ -118,6 +111,7 @@ void shiftDown(int a[], int start, int end_a) {
         pthread_mutex_unlock(level_mutexes+cur_level);
         pthread_mutex_unlock(level_mutexes+cur_level+1);
         cur_level ++;
+        child = LEFT(root);
     }
 }
 
@@ -151,11 +145,11 @@ int main(int argc, char *argv[]){
         printf("Time: %f\n", end - start);
         if(argc >= 5)
             if(!strcmp(argv[4], "-d"))
-                pprint_array(a, size);
-            if(is_sorted(a, size))
-                printf("\nSorted!\n");
-            else
-                printf("\nSomething went wrong!\n");
+                pprint_array(a, size)
+        if(is_sorted(a, size))
+            printf("\nSorted!\n");
+        else
+            printf("\nSomething went wrong!\n");
     }else{
         printf("USAGE: %s size threads exclusionZones [-d]\n", argv[0]);
     }
