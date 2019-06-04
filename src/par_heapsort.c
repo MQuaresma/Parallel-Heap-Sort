@@ -7,7 +7,7 @@
 #include <string.h>
 
 void heap_sort(int);
-void shiftDown(int a[], int);
+void shiftDown_Par(int a[], int);
 
 static int *a;
 static int size;
@@ -46,7 +46,7 @@ void *aux_parallel_level(void *id){
         a[end] = max;
         end--;
         pthread_rwlock_unlock(&end_lock);        
-        shiftDown(a,0);
+        shiftDown_Par(a,0);
         pthread_mutex_lock(level_locks);
         pthread_rwlock_wrlock(&end_lock);
     }
@@ -55,7 +55,7 @@ void *aux_parallel_level(void *id){
     return NULL;
 }
 
-void shiftDown(int a[], int start){
+void shiftDown_Par(int a[], int start){
     int cur_level = 0;
     int root = start;
     int child = LEFT(root);
@@ -98,14 +98,10 @@ void shiftDown(int a[], int start){
     pthread_rwlock_unlock(&end_lock);
 }
 
-
-void heap_sort(int granularity) {
+void *init(int granularity, pthread_t *thread_handles){
     void *(*callback)(void*);
     level_count = ceil(log(size) / log(2));
-    pthread_t* thread_handles = (pthread_t*)malloc(N_threads*sizeof(pthread_t));
 
-    heapify(a,size);
-    
     switch(granularity){
         case 1:         //tree granularity
             pthread_mutex_init(&tree_lock, NULL);
@@ -121,17 +117,13 @@ void heap_sort(int granularity) {
             break;
         default:
             free(thread_handles);
-            return;
+            return NULL;
     }
 
-    end = size - 1;
+    return callback;
+}
 
-    for(long i=0; i<N_threads; i++)
-        pthread_create(&thread_handles[i], NULL, callback, (void *)i);
-
-    for(long i=0; i<N_threads; i++)
-        pthread_join(thread_handles[i], NULL);
-
+void destroy(int granularity){
     switch(granularity){
         case 1:         //tree granularity
             pthread_mutex_destroy(&tree_lock);
@@ -143,7 +135,25 @@ void heap_sort(int granularity) {
             free(level_locks);
             break;
     }
+}
 
+void heap_sort(int granularity) {
+    pthread_t* thread_handles = (pthread_t*)malloc(N_threads*sizeof(pthread_t));
+
+    void *(*callback)(void*) = init(granularity, thread_handles);
+    if(callback == NULL) return;
+
+    heapify(a,size);
+    
+    end = size - 1;
+
+    for(long i=0; i<N_threads; i++)
+        pthread_create(&thread_handles[i], NULL, callback, (void *)i);
+
+    for(long i=0; i<N_threads; i++)
+        pthread_join(thread_handles[i], NULL);
+
+    destroy(granularity);
     free(thread_handles);
 }
 
