@@ -20,7 +20,7 @@ void heap_sort(int a[], int count) {
 int main(int argc, char *argv[]){
     if(argc == 2){
         int size = atoi(argv[1]);
-        int a[size];
+        int *a = (int *)calloc(size, sizeof(int));
         double start, end;
 
         for(int i=0; i<size; i++)
@@ -31,6 +31,7 @@ int main(int argc, char *argv[]){
         heap_sort(a,size);
         
         end = omp_get_wtime();
+        free(a);
 
         printf("Time: %f\n", end - start);
     }else{

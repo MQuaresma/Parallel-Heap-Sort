@@ -1,6 +1,6 @@
 CC=gcc
-SEQ_CFLAGS=-Wall
-PAR_CFLAGS=-Wall -lpthread -lm
+SEQ_CFLAGS=-O2 -Wall
+PAR_CFLAGS=-O2 -Wall -lpthread -lm
 SEQ=seq_heapsort
 PAR=par_heapsort
 OS:= $(shell uname -s)
