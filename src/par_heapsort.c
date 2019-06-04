@@ -8,7 +8,7 @@
 
 void heap_sort(int);
 void heapify(int a[], int);
-void shiftDown(int a[], int);
+void shiftDown(int a[], int, int);
 void shiftDown_seq(int a[], int start, int end);
 
 static int *a;
@@ -17,7 +17,7 @@ static int end;
 static int N_threads;
 static int level_count;
 static pthread_mutex_t *level_locks; 
-static pthread_mutex_t end_lock;
+static pthread_rwlock_t end_lock;
 static pthread_mutex_t tree_lock;
 
 void *aux_parallel_tree(void *id){
@@ -35,24 +35,68 @@ void *aux_parallel_tree(void *id){
             break;
         }
     }
+    return NULL;
 }
 
 void *aux_parallel_level(void *id){
     int max;
-    pthread_mutex_lock(&end_lock);
-
+    pthread_mutex_lock(level_locks);
+    pthread_rwlock_wrlock(&end_lock);
     while(end > 0){
-        pthread_mutex_lock(level_locks);
         max = a[0];
         a[0] = a[end];
         a[end] = max;
         end--;
-        shiftDown(a,0);
+        pthread_rwlock_unlock(&end_lock);        
+        shiftDown(a,0, (int)id);
+        pthread_mutex_lock(level_locks);
+        pthread_rwlock_wrlock(&end_lock);
     }
-
-    pthread_mutex_unlock(&end_lock);
+    pthread_mutex_unlock(level_locks);
+    pthread_rwlock_unlock(&end_lock);
     return NULL;
 }
+
+void shiftDown(int a[], int start, int id) {
+    int cur_level = 0;
+    int root = start;
+    int child = LEFT(root);
+    int swap;
+    int tmp;
+
+    pthread_mutex_lock(level_locks+cur_level+1);
+    pthread_rwlock_rdlock(&end_lock);
+    
+    while(child <= end) {
+        swap = root;
+        
+        if(a[swap] < a[child]) 
+            swap = child;
+        if((child+1) <= end)
+            if (a[swap] < a[child+1]) swap = child+1;
+        if(swap == root) 
+            root = end;
+        else {
+            tmp = a[swap];
+            a[swap] = a[root];
+            a[root] = tmp;
+            root = swap;
+        }
+        pthread_mutex_unlock(level_locks+cur_level);
+        pthread_rwlock_unlock(&end_lock);
+
+        cur_level ++;
+        child = LEFT(root);
+
+        pthread_mutex_lock(level_locks+cur_level+1);
+        pthread_rwlock_rdlock(&end_lock);
+    }
+
+    pthread_mutex_unlock(level_locks+cur_level);
+    pthread_mutex_unlock(level_locks+cur_level+1);
+    pthread_rwlock_unlock(&end_lock);
+}
+
 
 void heap_sort(int granularity) {
     void *(*callback)(void*);
@@ -67,7 +111,7 @@ void heap_sort(int granularity) {
             callback = aux_parallel_tree;
             break;
         case 2:         //level granularity
-            pthread_mutex_init(&end_lock, NULL);
+            pthread_rwlock_init(&end_lock, NULL);
             level_locks = (pthread_mutex_t*)malloc(level_count * sizeof(pthread_mutex_t));
             for(int i=0; i < level_count; i ++)
                 pthread_mutex_init(level_locks+i, NULL);
@@ -92,7 +136,7 @@ void heap_sort(int granularity) {
             pthread_mutex_destroy(&tree_lock);
             break;
         case 2:         //level granularity
-            pthread_mutex_destroy(&end_lock);
+            pthread_rwlock_destroy(&end_lock);
             for(int i=0; i < level_count; i ++)
                 pthread_mutex_destroy(level_locks+i);
             free(level_locks);
@@ -123,40 +167,6 @@ void shiftDown_seq(int a[], int start, int end) {
     }
 }
 
-void shiftDown(int a[], int start) {
-    int cur_level = 0;
-    int root = start;
-    int child = LEFT(root);
-    int swap;
-    int tmp;
-    
-    while(child <= end) {
-        swap = root;
-        pthread_mutex_unlock(&end_lock);
-        pthread_mutex_lock(level_locks+cur_level+1);
-        pthread_mutex_lock(&end_lock);
-        
-        if(a[swap] < a[child]) 
-            swap = child;
-        if((child+1) <= end)
-            if (a[swap] < a[child+1]) swap = child+1;
-        if(swap == root) 
-            root = end;
-        else {
-            tmp = a[swap];
-            a[swap] = a[root];
-            a[root] = tmp;
-            root = swap;
-        }
-        pthread_mutex_unlock(level_locks+cur_level);
-        pthread_mutex_unlock(&end_lock);
-        cur_level ++;
-        child = LEFT(root);
-        pthread_mutex_lock(&end_lock);
-    }
-    pthread_mutex_unlock(level_locks+cur_level);
-}
-
 
 void heapify(int a[], int count) {
   int start=(count-1)/2;
@@ -176,7 +186,7 @@ int main(int argc, char *argv[]){
         double start, end;
 
         for(int i=0; i<size; i++)
-            a[i]=rand() % 20;
+            a[i]=rand();
 
         start = omp_get_wtime();
 
