@@ -48,7 +48,6 @@ void *aux_parallel_level(void *id){
         a[end] = max;
         end--;
         shiftDown(a,0);
-        pthread_mutex_lock(&end_lock);
     }
 
     pthread_mutex_unlock(&end_lock);
@@ -133,7 +132,9 @@ void shiftDown(int a[], int start) {
     
     while(child <= end) {
         swap = root;
+        pthread_mutex_unlock(&end_lock);
         pthread_mutex_lock(level_locks+cur_level+1);
+        pthread_mutex_lock(&end_lock);
         
         if(a[swap] < a[child]) 
             swap = child;
@@ -154,7 +155,6 @@ void shiftDown(int a[], int start) {
         pthread_mutex_lock(&end_lock);
     }
     pthread_mutex_unlock(level_locks+cur_level);
-    pthread_mutex_unlock(&end_lock);
 }
 
 
