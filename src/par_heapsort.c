@@ -108,7 +108,7 @@ void shiftDown_Par(int a[], int start){
 
 void *aux_parallel_threePoint(void *id){
     int max;
-    pthread_mutex_lock(level_locks);
+    pthread_mutex_lock(node_locks);
     pthread_rwlock_wrlock(&end_lock);
     while(end > 0){
         max = a[0];
@@ -117,23 +117,25 @@ void *aux_parallel_threePoint(void *id){
         end--;
         pthread_rwlock_unlock(&end_lock);        
         shiftDown_ParTP(a,0);
-        pthread_mutex_lock(level_locks);
+        pthread_mutex_lock(node_locks);
         pthread_rwlock_wrlock(&end_lock);
     }
-    pthread_mutex_unlock(level_locks);
+    pthread_mutex_unlock(node_locks);
     pthread_rwlock_unlock(&end_lock);
     return NULL;
 }
 
 void shiftDown_ParTP(int a[], int start){
-    int cur_level = 0;
+    int cur_node = 0;
     int root = start;
     int child = LEFT(root);
     int swap;
-    int tmp;
+    int tmpL, tmpR;
 
-    pthread_mutex_lock(level_locks+cur_level+1);
+    pthread_mutex_lock(node_locks+LEFT(cur_node));
     pthread_rwlock_rdlock(&end_lock);
+    if(RIGHT(cur_node)<end)
+        pthread_mutex_lock(node_locks+RIGHT(cur_node));
     
     while(child <= end) {
         swap = root;
@@ -145,26 +147,36 @@ void shiftDown_ParTP(int a[], int start){
         if(swap == root) 
             root = end;
         else {
-            tmp = a[swap];
+            tmpL = a[swap];
             a[swap] = a[root];
-            a[root] = tmp;
+            a[root] = tmpL;
             root = swap;
         }
         child = LEFT(root);
-        tmp = (child < end);
+        tmpL = (child < end);
+        tmpR = ((child+1) < end);
 
-        pthread_mutex_unlock(level_locks+cur_level);
+        pthread_mutex_unlock(node_locks+cur_node);
+        if(RIGHT(cur_node)<end)
+            pthread_mutex_unlock(node_locks+RIGHT(cur_node));
         pthread_rwlock_unlock(&end_lock);
 
-        cur_level ++;
-        if(tmp)
-            pthread_mutex_lock(level_locks+cur_level+1);
+        cur_node = child;
+        
+        if(tmpL){
+            pthread_mutex_lock(node_locks+LEFT(cur_node));
+            if(tmpR)
+                pthread_mutex_lock(node_locks+RIGHT(cur_node));       
+        }
         pthread_rwlock_rdlock(&end_lock);
     }
 
-    pthread_mutex_unlock(level_locks+cur_level);
-    if(tmp)
-        pthread_mutex_unlock(level_locks+cur_level+1);
+    pthread_mutex_unlock(level_locks+cur_node);
+    if(tmpL){
+        pthread_mutex_lock(node_locks+LEFT(cur_node));
+        if(tmpR)
+            pthread_mutex_lock(node_locks+RIGHT(cur_node));       
+    }
     pthread_rwlock_unlock(&end_lock);
 }
 
