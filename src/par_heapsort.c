@@ -6,7 +6,7 @@
 #include <math.h>
 #include <string.h>
 
-void heap_sort();
+void heap_sort(int);
 void heapify(int a[], int);
 void shiftDown(int a[], int, int);
 void shiftDown_seq(int a[], int start, int end);
@@ -18,6 +18,24 @@ static int N_threads;
 static int level_count;
 static pthread_mutex_t *level_mutexes; 
 static pthread_mutex_t end_mut;
+static pthread_mutex_t lock;
+
+void *aux_parallel_tree(void *id){
+  while ( 1 ) {
+    pthread_mutex_lock(&lock);
+    if (end > 0){
+        int cmax = a[0];
+        a[0]=a[end];
+        a[end]=cmax;
+        end--;
+        shiftDown_seq(a,0,end);
+        pthread_mutex_unlock(&lock);
+    }else{
+        pthread_mutex_unlock(&lock);
+        break;
+    }
+  }
+}
 
 void *aux_parallel_level(void *id){
     int max;
@@ -39,37 +57,62 @@ void *aux_parallel_level(void *id){
     return NULL;
 }
 
-void heap_sort() {
+void heap_sort(int granularity) {
+    void *(*callback)(void*);
     level_count = ceil(log(size) / log(2));
     pthread_t* thread_handles = (pthread_t*)malloc(N_threads*sizeof(pthread_t));
 
     heapify(a,size); 
-    level_mutexes = (pthread_mutex_t*)malloc(level_count * sizeof(pthread_mutex_t));
-    pthread_mutex_init(&end_mut, NULL);
+    
+    switch(granularity){
+        case 1:         //tree granularity
+            pthread_mutex_init(&lock, NULL);
+            callback = aux_parallel_tree;
+            break;
+        case 2:         //level granularity
+            pthread_mutex_init(&end_mut, NULL);
+            level_mutexes = (pthread_mutex_t*)malloc(level_count * sizeof(pthread_mutex_t));
+            for(int i=0; i < level_count; i ++)
+                pthread_mutex_init(level_mutexes+i, NULL);
+            
+            callback = aux_parallel_level;
+            break;
+        default:
+            free(thread_handles);
+            return;
+    }
+
     end = size - 1;
 
-    for(int i=0; i < level_count; i ++)
-        pthread_mutex_init(level_mutexes+i, NULL);
-
     for(long i=0; i<N_threads; i++)
-        pthread_create(&thread_handles[i], NULL, aux_parallel_level, (void *)i);
+        pthread_create(&thread_handles[i], NULL, callback, (void *)i);
 
     for(long i=0; i<N_threads; i++)
         pthread_join(thread_handles[i], NULL);
 
-    pthread_mutex_destroy(&end_mut);
-    for(int i=0; i < level_count; i ++)
-        pthread_mutex_destroy(level_mutexes+i);
+    switch(granularity){
+        case 1:         //tree granularity
+            pthread_mutex_destroy(&lock);
+            break;
+        case 2:         //level granularity
+            pthread_mutex_destroy(&end_mut);
+            for(int i=0; i < level_count; i ++)
+                pthread_mutex_destroy(level_mutexes+i);
+            free(level_mutexes);
+            break;
+    }
 
-    free(level_mutexes);
     free(thread_handles);
 }
 
 void shiftDown_seq(int a[], int start, int end) {
     int root = start;
-    int swap = root;
+    int child;
+    int swap;
 
     while( (2*root+1) <= end) {
+        child = LEFT(root);
+        swap = root;
         if (a[swap]<a[child]) swap = child;
         if ((child+1) <= end)
             if (a[swap]<a[child+1]) swap = child+1;
@@ -95,6 +138,7 @@ void shiftDown(int a[], int start, int end_a) {
         swap = root;
 		if(root)
             pthread_mutex_lock(level_mutexes+cur_level);
+        pthread_mutex_lock(level_mutexes+cur_level+1);
         
         if(a[swap] < a[child]) 
             swap = child;
@@ -115,6 +159,7 @@ void shiftDown(int a[], int start, int end_a) {
     }
 }
 
+
 void heapify(int a[], int count) {
   int start=(count-1)/2;
 
@@ -123,7 +168,6 @@ void heapify(int a[], int count) {
     start--;
   }
 }
-
 
 
 int main(int argc, char *argv[]){
@@ -138,20 +182,21 @@ int main(int argc, char *argv[]){
 
         start = omp_get_wtime();
 
-        heap_sort();
+        heap_sort(atoi(argv[3]));
 
         end = omp_get_wtime();
 
+        free(a);
         printf("Time: %f\n", end - start);
         if(argc >= 5)
             if(!strcmp(argv[4], "-d"))
-                pprint_array(a, size)
+                pprint_array(a, size);
         if(is_sorted(a, size))
             printf("\nSorted!\n");
         else
             printf("\nSomething went wrong!\n");
     }else{
-        printf("USAGE: %s size threads exclusionZones [-d]\n", argv[0]);
+        printf("USAGE: %s size threads granularity_level [-d]\n", argv[0]);
     }
     return 0;
 }
