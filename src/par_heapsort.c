@@ -8,6 +8,7 @@
 
 void heap_sort(int);
 void shiftDown_Par(int a[], int);
+void shiftDown_ParTP(int a[], int);
 
 static int *a;
 static int size;
@@ -63,6 +64,68 @@ void *aux_parallel_level(void *id){
 }
 
 void shiftDown_Par(int a[], int start){
+    int cur_level = 0;
+    int root = start;
+    int child = LEFT(root);
+    int swap;
+    int tmp;
+
+    pthread_mutex_lock(level_locks+cur_level+1);
+    pthread_rwlock_rdlock(&end_lock);
+    
+    while(child <= end) {
+        swap = root;
+        
+        if(a[swap] < a[child]) 
+            swap = child;
+        if((child+1) <= end)
+            if (a[swap] < a[child+1]) swap = child+1;
+        if(swap == root) 
+            root = end;
+        else {
+            tmp = a[swap];
+            a[swap] = a[root];
+            a[root] = tmp;
+            root = swap;
+        }
+        child = LEFT(root);
+        tmp = (child < end);
+
+        pthread_mutex_unlock(level_locks+cur_level);
+        pthread_rwlock_unlock(&end_lock);
+
+        cur_level ++;
+        if(tmp)
+            pthread_mutex_lock(level_locks+cur_level+1);
+        pthread_rwlock_rdlock(&end_lock);
+    }
+
+    pthread_mutex_unlock(level_locks+cur_level);
+    if(tmp)
+        pthread_mutex_unlock(level_locks+cur_level+1);
+    pthread_rwlock_unlock(&end_lock);
+}
+
+void *aux_parallel_threePoint(void *id){
+    int max;
+    pthread_mutex_lock(level_locks);
+    pthread_rwlock_wrlock(&end_lock);
+    while(end > 0){
+        max = a[0];
+        a[0] = a[end];
+        a[end] = max;
+        end--;
+        pthread_rwlock_unlock(&end_lock);        
+        shiftDown_ParTP(a,0);
+        pthread_mutex_lock(level_locks);
+        pthread_rwlock_wrlock(&end_lock);
+    }
+    pthread_mutex_unlock(level_locks);
+    pthread_rwlock_unlock(&end_lock);
+    return NULL;
+}
+
+void shiftDown_ParTP(int a[], int start){
     int cur_level = 0;
     int root = start;
     int child = LEFT(root);
