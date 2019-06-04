@@ -7,9 +7,7 @@
 #include <string.h>
 
 void heap_sort(int);
-void heapify(int a[], int);
 void shiftDown(int a[], int);
-void shiftDown_seq(int a[], int start, int end);
 
 static int *a;
 static int size;
@@ -28,7 +26,7 @@ void *aux_parallel_tree(void *id){
             a[0]=a[end];
             a[end]=cmax;
             end--;
-            shiftDown_seq(a,0,end);
+            shiftDown_Seq(a,0,end);
             pthread_mutex_unlock(&tree_lock);
         }else{
             pthread_mutex_unlock(&tree_lock);
@@ -148,38 +146,6 @@ void heap_sort(int granularity) {
 
     free(thread_handles);
 }
-
-void shiftDown_seq(int a[], int start, int end) {
-    int root = start;
-    int child;
-    int swap;
-
-    while( (2*root+1) <= end) {
-        child = LEFT(root);
-        swap = root;
-        if (a[swap]<a[child]) swap = child;
-        if ((child+1) <= end)
-            if (a[swap]<a[child+1]) swap = child+1;
-        if(swap==root) root=end;
-        else {
-            int tmp = a[swap];
-            a[swap]=a[root];
-            a[root]=tmp;
-            root = swap;
-        }
-    }
-}
-
-
-void heapify(int a[], int count) {
-  int start=(count-1)/2;
-
-  while(start>=0) {
-    shiftDown_seq(a,start,count-1);
-    start--;
-  }
-}
-
 
 int main(int argc, char *argv[]){
     if(argc >= 4){
