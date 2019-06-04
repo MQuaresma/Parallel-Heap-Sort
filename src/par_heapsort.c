@@ -8,7 +8,6 @@
 
 void heap_sort(int);
 void shiftDown_Par(int a[], int);
-void shiftDown_ParTP(int a[], int);
 
 static int *a;
 static int size;
@@ -16,7 +15,6 @@ static int end;
 static int N_threads;
 static int level_count;
 static pthread_mutex_t *level_locks; 
-static pthread_mutex_t *node_locks; 
 static pthread_rwlock_t end_lock;
 static pthread_mutex_t tree_lock;
 
@@ -106,80 +104,6 @@ void shiftDown_Par(int a[], int start){
     pthread_rwlock_unlock(&end_lock);
 }
 
-void *aux_parallel_threePoint(void *id){
-    int max;
-    pthread_mutex_lock(node_locks);
-    pthread_rwlock_wrlock(&end_lock);
-    while(end > 0){
-        max = a[0];
-        a[0] = a[end];
-        a[end] = max;
-        end--;
-        pthread_rwlock_unlock(&end_lock);        
-        shiftDown_ParTP(a,0);
-        pthread_mutex_lock(node_locks);
-        pthread_rwlock_wrlock(&end_lock);
-    }
-    pthread_mutex_unlock(node_locks);
-    pthread_rwlock_unlock(&end_lock);
-    return NULL;
-}
-
-void shiftDown_ParTP(int a[], int start){
-    int cur_node = 0;
-    int root = start;
-    int child = LEFT(root);
-    int swap;
-    int tmpL, tmpR;
-
-    pthread_mutex_lock(node_locks+LEFT(cur_node));
-    pthread_rwlock_rdlock(&end_lock);
-    if(RIGHT(cur_node)<end)
-        pthread_mutex_lock(node_locks+RIGHT(cur_node));
-    
-    while(child <= end) {
-        swap = root;
-        
-        if(a[swap] < a[child]) 
-            swap = child;
-        if((child+1) <= end)
-            if (a[swap] < a[child+1]) swap = child+1;
-        if(swap == root) 
-            root = end;
-        else {
-            tmpL = a[swap];
-            a[swap] = a[root];
-            a[root] = tmpL;
-            root = swap;
-        }
-        child = LEFT(root);
-        tmpL = (child < end);
-        tmpR = ((child+1) < end);
-
-        pthread_mutex_unlock(node_locks+cur_node);
-        if(RIGHT(cur_node)<end)
-            pthread_mutex_unlock(node_locks+RIGHT(cur_node));
-        pthread_rwlock_unlock(&end_lock);
-
-        cur_node = child;
-        
-        if(tmpL){
-            pthread_mutex_lock(node_locks+LEFT(cur_node));
-            if(tmpR)
-                pthread_mutex_lock(node_locks+RIGHT(cur_node));       
-        }
-        pthread_rwlock_rdlock(&end_lock);
-    }
-
-    pthread_mutex_unlock(level_locks+cur_node);
-    if(tmpL){
-        pthread_mutex_lock(node_locks+LEFT(cur_node));
-        if(tmpR)
-            pthread_mutex_lock(node_locks+RIGHT(cur_node));       
-    }
-    pthread_rwlock_unlock(&end_lock);
-}
-
 void *init(int granularity, pthread_t *thread_handles){
     void *(*callback)(void*);
 
@@ -196,13 +120,6 @@ void *init(int granularity, pthread_t *thread_handles){
                 pthread_mutex_init(level_locks+i, NULL);
             
             callback = aux_parallel_level;
-            break;
-        case 3:
-            pthread_rwlock_init(&end_lock, NULL);
-            node_locks = (pthread_mutex_t*)malloc(size * sizeof(pthread_mutex_t));
-            for(int i=0; i < level_count; i ++)
-                pthread_mutex_init(node_locks+i, NULL);
-            callback = aux_parallel_threePoint;
             break;
         default:
             free(thread_handles);
@@ -221,12 +138,6 @@ void destroy(int granularity){
             pthread_rwlock_destroy(&end_lock);
             for(int i=0; i < level_count; i ++)
                 pthread_mutex_destroy(level_locks+i);
-            free(level_locks);
-            break;
-        case 3:         //three node granularity
-            pthread_rwlock_destroy(&end_lock);
-            for(int i=0; i < size; i ++)
-                pthread_mutex_destroy(node_locks+i);
             free(level_locks);
             break;
     }
