@@ -27,7 +27,7 @@ while [ $SIZE -lt 2049 ]; do
         ./seq_heapsort $SIZE >> times/seq_$SIZE.txt
         let NUM=NUM+1
     done
-    perf stat -a -o perf/stat/seq_$SIZE ./seq_heapsort $SIZE
+    perf stat -o perf/stat/seq_$SIZE ./seq_heapsort $SIZE
     perf record -F 99 -g -o perf/record/seq_$SIZE ./seq_heapsort $SIZE
     let SIZE=$SIZE*2
 done
@@ -43,8 +43,8 @@ while [ $SIZE -lt 2049 ]; do
             ./par_heapsort $SIZE $OMP_NUM_THREADS 2 >> times/par_${SIZE}_${OMP_NUM_THREADS}_level.txt
             let NUM=NUM+1
         done
-        perf stat -a -o perf/stat/par_${SIZE}_${OMP_NUM_THREADS}_tree ./par_heapsort $SIZE $OMP_NUM_THREADS 1
-        perf stat -a -o perf/stat/par_${SIZE}_${OMP_NUM_THREADS}_level ./par_heapsort $SIZE $OMP_NUM_THREADS 2
+        perf stat -o perf/stat/par_${SIZE}_${OMP_NUM_THREADS}_tree ./par_heapsort $SIZE $OMP_NUM_THREADS 1
+        perf stat -o perf/stat/par_${SIZE}_${OMP_NUM_THREADS}_level ./par_heapsort $SIZE $OMP_NUM_THREADS 2
         perf record -F 99 -g -o perf/record/par_${SIZE}_${OMP_NUM_THREADS}_tree ./par_heapsort $SIZE $OMP_NUM_THREADS 1
         perf record -F 99 -g -o perf/record/par_${SIZE}_${OMP_NUM_THREADS}_level ./par_heapsort $SIZE $OMP_NUM_THREADS 2
         let OMP_NUM_THREADS=$OMP_NUM_THREADS*2
