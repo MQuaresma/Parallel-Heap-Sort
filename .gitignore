@@ -34,3 +34,6 @@
 **/*.pdf
 **/._*
 **/.DS_Store
+
+**/seq_heapsort
+**/par_heapsort
