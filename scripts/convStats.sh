@@ -1,0 +1,39 @@
+./getStats.py seq_8192
+./getStats.py par_8192_2_tree
+./getStats.py par_8192_4_tree
+./getStats.py par_8192_8_tree
+./getStats.py par_8192_16_tree
+./getStats.py par_8192_2_level
+./getStats.py par_8192_4_level
+./getStats.py par_8192_8_level
+./getStats.py par_8192_16_level
+
+./getStats.py seq_65536
+./getStats.py par_65536_2_tree
+./getStats.py par_65536_4_tree
+./getStats.py par_65536_8_tree
+./getStats.py par_65536_16_tree
+./getStats.py par_65536_2_level
+./getStats.py par_65536_4_level
+./getStats.py par_65536_8_level
+./getStats.py par_65536_16_level
+
+./getStats.py seq_1572864
+./getStats.py par_1572864_2_tree
+./getStats.py par_1572864_4_tree
+./getStats.py par_1572864_8_tree
+./getStats.py par_1572864_16_tree
+./getStats.py par_1572864_2_level
+./getStats.py par_1572864_4_level
+./getStats.py par_1572864_8_level
+./getStats.py par_1572864_16_level
+
+./getStats.py seq_3145728
+./getStats.py par_3145728_2_tree
+./getStats.py par_3145728_4_tree
+./getStats.py par_3145728_8_tree
+./getStats.py par_3145728_16_tree
+./getStats.py par_3145728_2_level
+./getStats.py par_3145728_4_level
+./getStats.py par_3145728_8_level
+./getStats.py par_3145728_16_level
